@@ -137,7 +137,7 @@ static std::tuple<s64, s64> write_sky_textures(OutBuffer dest, const std::vector
 		texture.divide_alphas();
 		texture.swizzle_palette();
 		if(game == Game::DL) {
-			texture.swizzle();
+			texture.reswizzle();
 		}
 		
 		dest.pad(0x40);

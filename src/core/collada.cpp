@@ -672,7 +672,7 @@ static void write_effects(OutBuffer dest, const std::vector<ColladaMaterial>& ma
 		if(material.surface.type == MaterialSurfaceType::TEXTURE) {
 			dest.writelf(4, "<newparam sid=\"%s_surface\">", material.name.c_str());
 			dest.writelf(4, "\t<surface type=\"2D\">");
-			verify_fatal(material.surface.texture < texture_count);
+			//verify_fatal(material.surface.texture < texture_count);
 			dest.writelf(4, "\t\t<init_from>texture_%d</init_from>", material.surface.texture);
 			dest.writelf(4, "\t\t<format>A8R8G8B8</format>");
 			dest.writelf(4, "\t</surface>");

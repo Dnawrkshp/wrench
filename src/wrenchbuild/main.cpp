@@ -33,6 +33,7 @@
 #include <engine/moby.h>
 #include <engine/tie.h>
 #include <engine/shrub.h>
+#include <engine/sky.h>
 #include <engine/collision.h>
 #include <iso/iso_packer.h>
 #include <iso/iso_unpacker.h>
@@ -80,10 +81,13 @@ static void pack(const std::vector<fs::path>& input_paths, const std::string& as
 static void decompress(const fs::path& input_path, const fs::path& output_path, s64 offset);
 static void compress(const fs::path& input_path, const fs::path& output_path);
 static void extract_tfrags(const fs::path& input_path, const fs::path& output_path, Game game);
-static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game);
+static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game, const std::string hint);
 static void extract_tie(const fs::path& input_path, const fs::path& output_path, Game game);
-static void extract_shrub(const fs::path& input_path, const fs::path& output_path);
+static void extract_shrub(const fs::path& input_path, const fs::path& output_path, const std::string hint);
 static void unpack_collision(const fs::path& input_path, const fs::path& output_path);
+static void unpack_sky(const fs::path& input_path, const fs::path& output_path, Game game);
+static void build_shrub(const fs::path& input_path, const fs::path& output_path, std::string& hint);
+static void build_sky(const fs::path& input_path, const fs::path& output_path, Game game);
 static void print_usage(bool developer_subcommands);
 static void print_version();
 
@@ -135,6 +139,10 @@ static int wrenchbuild(int argc, char** argv) {
 		} else if(continuation == "_collision") {
 			ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH);
 			unpack_collision(args.input_paths[0], args.output_path);
+			return 0;
+		} else if(continuation == "_sky") {
+			ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME);
+			unpack_sky(args.input_paths[0], args.output_path, args.game);
 			return 0;
 		} else if(!continuation.empty()) {
 			print_usage(false);
@@ -208,8 +216,8 @@ static int wrenchbuild(int argc, char** argv) {
 	}
 	
 	if(mode == "extract_moby") {
-		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME);
-		extract_moby(args.input_paths[0], args.output_path, args.game);
+		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME | ARG_HINT);
+		extract_moby(args.input_paths[0], args.output_path, args.game, args.hint);
 		return 0;
 	}
 	
@@ -220,14 +228,26 @@ static int wrenchbuild(int argc, char** argv) {
 	}
 	
 	if(mode == "extract_shrub") {
-		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH);
-		extract_shrub(args.input_paths[0], args.output_path);
+		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_HINT);
+		extract_shrub(args.input_paths[0], args.output_path, args.hint);
 		return 0;
 	}
 	
 	if(mode == "extract_tfrags") {
 		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME);
 		extract_tfrags(args.input_paths[0], args.output_path, args.game);
+		return 0;
+	}
+
+	if(mode == "build_shrub") {
+		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_HINT);
+		build_shrub(args.input_paths[0], args.output_path, args.hint);
+		return 0;
+	}
+
+	if(mode == "build_sky") {
+		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME);
+		build_sky(args.input_paths[0], args.output_path, args.game);
 		return 0;
 	}
 	
@@ -536,10 +556,11 @@ static void extract_tfrags(const fs::path& input_path, const fs::path& output_pa
 	write_file(output_path, xml, "w");
 }
 
-static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game) {
+static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game, const std::string hint) {
 	auto bin = read_file(input_path.string().c_str());
+	int tex_count = std::stoi(hint);
 	MobyClassData moby = read_moby_class(bin, game);
-	ColladaScene scene = recover_moby_class(moby, 0, 0);
+	ColladaScene scene = recover_moby_class(moby, 0, tex_count);
 	auto xml = write_collada(scene);
 	write_file(output_path, xml, "w");
 }
@@ -552,7 +573,7 @@ static void extract_tie(const fs::path& input_path, const fs::path& output_path,
 	write_file(output_path, xml, "w");
 }
 
-static void extract_shrub(const fs::path& input_path, const fs::path& output_path) {
+static void extract_shrub(const fs::path& input_path, const fs::path& output_path, const std::string hint) {
 	auto bin = read_file(input_path.string().c_str());
 	ShrubClass shrub = read_shrub_class(bin);
 	auto [gltf, scene] = GLTF::create_default_scene(get_versioned_application_name("Wrench Build Tool"));
@@ -560,8 +581,42 @@ static void extract_shrub(const fs::path& input_path, const fs::path& output_pat
 	GLTF::Node& node = gltf.nodes.emplace_back();
 	node.mesh = (s32) gltf.meshes.size();
 	gltf.meshes.emplace_back(recover_shrub_class(shrub));
+
+	int tex_count = std::stoi(hint);
+	for(s32 i = 0; i < tex_count; i++) {
+		GLTF::Material& material = gltf.materials.emplace_back();
+		material.name = stringf("%d", i);
+		material.pbr_metallic_roughness.emplace();
+		material.pbr_metallic_roughness->base_color_texture.emplace();
+		material.pbr_metallic_roughness->base_color_texture->index = (s32) gltf.textures.size();
+		material.alpha_mode = GLTF::MASK;
+		material.double_sided = true;
+
+		GLTF::Texture& texture = gltf.textures.emplace_back();
+		texture.source = (s32) gltf.images.size();
+
+		GLTF::Image& image = gltf.images.emplace_back();
+		//image.uri = material_asset.diffuse().src().path.string();
+
+		//material_asset.set_name(*material.name);
+	}
+
 	auto glb = GLTF::write_glb(gltf);
-	write_file(output_path,glb, "w");
+	write_file(output_path,glb);
+}
+
+static void build_shrub(const fs::path& input_path, const fs::path& output_path, std::string& hint) {
+	BuildConfig config(Game::DL, Region::US); // Don't care.
+	AssetForest forest;
+	AssetBank& bank = forest.mount<LooseAssetBank>(input_path, true);
+	fs::path filename = hint + ".asset";
+	ShrubClassAsset& asset = bank.asset_file(filename).root().child<ShrubClassAsset>(hint.c_str());
+	AssetPackerFunc* pack_func = asset.funcs.pack_dl;
+
+	FileOutputStream stream;
+	verify(stream.open(output_path), "Cannot open output file.");
+
+	(*pack_func)(stream, nullptr, nullptr, asset, config, nullptr);
 }
 
 static void unpack_collision(const fs::path& input_path, const fs::path& output_path) {
@@ -576,6 +631,32 @@ static void unpack_collision(const fs::path& input_path, const fs::path& output_
 	unpack_asset_impl(collision, stream, nullptr, config);
 	
 	bank.write();
+}
+
+static void unpack_sky(const fs::path& input_path, const fs::path& output_path, Game game) {
+	AssetForest forest;
+	AssetBank& bank = forest.mount<LooseAssetBank>(output_path, true);
+	SkyAsset& sky = bank.asset_file("sky.asset").root().child<SkyAsset>("sky");
+
+	FileInputStream stream;
+	verify(stream.open(input_path), "Cannot open input file.");
+
+	BuildConfig config(game, Region::US); // Don't care.
+	unpack_asset_impl(sky, stream, nullptr, config);
+
+	bank.write();
+}
+
+static void build_sky(const fs::path& input_path, const fs::path& output_path, Game game) {
+	BuildConfig config(game, Region::US); // Don't care.
+	AssetForest forest;
+	AssetBank& bank = forest.mount<LooseAssetBank>(input_path, true);
+	fs::path filename = "sky.asset";
+	SkyAsset& asset = bank.asset_file(filename).root().child<SkyAsset>("sky");
+
+	FileOutputStream stream;
+	verify(stream.open(output_path), "Cannot open output file.");
+	pack_asset_impl(stream, nullptr, nullptr, asset, config, nullptr);
 }
 
 static void print_usage(bool developer_subcommands) {

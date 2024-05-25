@@ -549,13 +549,13 @@ ColladaScene recover_moby_class(const MobyClassData& moby, s32 o_class, s32 text
 			std::string name = "high_lod_" + std::to_string(i);
 			scene.meshes.emplace_back(recover_moby_mesh(moby.mesh.high_lod, name.c_str(), o_class, texture_count, i));
 		}
-		for(s32 i = 0; i < (s32) moby.mesh.low_lod.size(); i++) {
+		/*for(s32 i = 0; i < (s32) moby.mesh.low_lod.size(); i++) {
 			std::string name = "low_lod_" + std::to_string(i);
 			scene.meshes.emplace_back(recover_moby_mesh(moby.mesh.low_lod, name.c_str(), o_class, texture_count, i));
-		}
+		}*/
 	} else {
 		scene.meshes.emplace_back(recover_moby_mesh(moby.mesh.high_lod, "high_lod", o_class, texture_count, NO_SUBMESH_FILTER));
-		scene.meshes.emplace_back(recover_moby_mesh(moby.mesh.low_lod, "low_lod", o_class, texture_count, NO_SUBMESH_FILTER));
+		//scene.meshes.emplace_back(recover_moby_mesh(moby.mesh.low_lod, "low_lod", o_class, texture_count, NO_SUBMESH_FILTER));
 	}
 	
 	for(s32 i = 0; i < (s32) moby.bangles.size(); i++) {
