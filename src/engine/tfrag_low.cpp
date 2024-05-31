@@ -35,7 +35,7 @@ Tfrags read_tfrags(Buffer src, Game game) {
 	auto table = src.read_multiple<TfragHeader>(table_header.table_offset, table_header.tfrag_count, "tfrag table");
 	for(size_t i = 0; i < table.size(); i++) {
 		const TfragHeader& header = table[i];
-		
+
 		ERROR_CONTEXT("tfrag %d", i);
 		
 		Tfrag& tfrag = tfrags.fragments.emplace_back();

@@ -124,7 +124,7 @@ ColladaScene recover_tfrags(const Tfrags& tfrags, TfragRecoveryFlags flags) {
 		vertex_infos.insert(vertex_infos.end(), BEGIN_END(tfrag.common_vertex_info));
 		vertex_infos.insert(vertex_infos.end(), BEGIN_END(tfrag.lod_01_vertex_info));
 		vertex_infos.insert(vertex_infos.end(), BEGIN_END(tfrag.lod_0_vertex_info));
-		
+
 		// Figure out which vertices belong to which tfaces.
 		size_t tface_count = propagate_tface_information(vertices, tfrag, vertex_infos);
 		
@@ -156,7 +156,7 @@ ColladaScene recover_tfrags(const Tfrags& tfrags, TfragRecoveryFlags flags) {
 				dest.colour.a = 255;
 			}
 		}
-		
+
 		// Create the faces.
 		std::vector<s32> tfaces(tface_count, -1);
 		std::vector<TfragFace> lod_0_faces = recover_faces(tfrag.lod_0_strips, tfrag.lod_0_indices);
@@ -177,7 +177,18 @@ ColladaScene recover_tfrags(const Tfrags& tfrags, TfragRecoveryFlags flags) {
 					submesh = &mesh->submeshes.at(submesh_index);
 				}
 			} else {
-				submesh = &mesh->submeshes.at(0);
+				s32 face_mat_idx = tfrag.common_textures.at(face.ad_gif).d1_tex0_1.data_lo;
+				for (s32 j = 0; j < mesh->submeshes.size(); ++j) {
+					if (mesh->submeshes[j].material == face_mat_idx) {
+						submesh = &mesh->submeshes[j];
+						break;
+					}
+				}
+
+				if (submesh == NULL) {
+					submesh = &mesh->submeshes.emplace_back();
+					submesh->material = face_mat_idx;
+				}
 			}
 			
 			// Add the new face.
@@ -302,7 +313,7 @@ static s32 map_face_to_tface(const TfragFace& face, const std::vector<TfragVerte
 				}
 			}
 		}
-		
+
 		for(s32 i = 0; i < ARRAY_SIZE(tface_indices); i++) {
 			bool matches = true;
 			for(s32 j = 0; j < ARRAY_SIZE(tface_indices); j++) {
