@@ -81,13 +81,14 @@ static void pack(const std::vector<fs::path>& input_paths, const std::string& as
 static void decompress(const fs::path& input_path, const fs::path& output_path, s64 offset);
 static void compress(const fs::path& input_path, const fs::path& output_path);
 static void extract_tfrags(const fs::path& input_path, const fs::path& output_path, Game game);
-static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game, const std::string hint);
+static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game);
 static void extract_tie(const fs::path& input_path, const fs::path& output_path, Game game);
 static void extract_shrub(const fs::path& input_path, const fs::path& output_path, const std::string hint);
 static void unpack_collision(const fs::path& input_path, const fs::path& output_path);
 static void unpack_sky(const fs::path& input_path, const fs::path& output_path, Game game);
 static void build_shrub(const fs::path& input_path, const fs::path& output_path, std::string& hint);
 static void build_sky(const fs::path& input_path, const fs::path& output_path, Game game);
+static void build_collision(const fs::path& input_path, const fs::path& output_path, std::string& hint);
 static void print_usage(bool developer_subcommands);
 static void print_version();
 
@@ -216,8 +217,8 @@ static int wrenchbuild(int argc, char** argv) {
 	}
 	
 	if(mode == "extract_moby") {
-		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME | ARG_HINT);
-		extract_moby(args.input_paths[0], args.output_path, args.game, args.hint);
+		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_GAME);
+		extract_moby(args.input_paths[0], args.output_path, args.game);
 		return 0;
 	}
 	
@@ -250,7 +251,13 @@ static int wrenchbuild(int argc, char** argv) {
 		build_sky(args.input_paths[0], args.output_path, args.game);
 		return 0;
 	}
-	
+
+	if(mode == "build_collision") {
+		ParsedArgs args = parse_args(argc, argv, ARG_INPUT_PATH | ARG_OUTPUT_PATH | ARG_HINT);
+		build_collision(args.input_paths[0], args.output_path, args.hint);
+		return 0;
+	}
+
 	print_usage(false);
 	return 1;
 }
@@ -556,10 +563,17 @@ static void extract_tfrags(const fs::path& input_path, const fs::path& output_pa
 	write_file(output_path, xml, "w");
 }
 
-static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game, const std::string hint) {
+static void extract_moby(const fs::path& input_path, const fs::path& output_path, Game game) {
 	auto bin = read_file(input_path.string().c_str());
-	int tex_count = std::stoi(hint);
 	MobyClassData moby = read_moby_class(bin, game);
+	int tex_count = count_moby_mesh_texture_count(moby.mesh.high_lod, 0);
+	int tex_count2 = count_moby_mesh_texture_count(moby.mesh.low_lod, 0);
+	for (s32 i = 0; i < moby.bangles.size(); ++i)
+	{
+		int bangles_tex_count = count_moby_mesh_texture_count(moby.bangles[i].submeshes, 0);
+		if(bangles_tex_count > tex_count)
+			tex_count = bangles_tex_count;
+	}
 	ColladaScene scene = recover_moby_class(moby, 0, tex_count);
 	auto xml = write_collada(scene);
 	write_file(output_path, xml, "w");
@@ -611,6 +625,20 @@ static void build_shrub(const fs::path& input_path, const fs::path& output_path,
 	AssetBank& bank = forest.mount<LooseAssetBank>(input_path, true);
 	fs::path filename = hint + ".asset";
 	ShrubClassAsset& asset = bank.asset_file(filename).root().child<ShrubClassAsset>(hint.c_str());
+	AssetPackerFunc* pack_func = asset.funcs.pack_dl;
+
+	FileOutputStream stream;
+	verify(stream.open(output_path), "Cannot open output file.");
+
+	(*pack_func)(stream, nullptr, nullptr, asset, config, nullptr);
+}
+
+static void build_collision(const fs::path& input_path, const fs::path& output_path, std::string& hint) {
+	BuildConfig config(Game::DL, Region::US); // Don't care.
+	AssetForest forest;
+	AssetBank& bank = forest.mount<LooseAssetBank>(input_path, true);
+	fs::path filename = hint + ".asset";
+	CollisionAsset& asset = bank.asset_file(filename).root().child<CollisionAsset>(hint.c_str());
 	AssetPackerFunc* pack_func = asset.funcs.pack_dl;
 
 	FileOutputStream stream;

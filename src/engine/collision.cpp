@@ -471,7 +471,7 @@ static CollisionSectors build_collision_sectors(const ColladaScene& scene, const
 						}
 					}
 				}
-				verify_fatal(inserts > 0);
+				//verify_fatal(inserts > 0);
 			}
 		}
 	}

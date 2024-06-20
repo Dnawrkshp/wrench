@@ -816,6 +816,9 @@ static void write_geometries(OutBuffer dest, const std::vector<Mesh>& meshes) {
 				if(mesh.flags & MESH_HAS_TEX_COORDS) {
 					dest.writelf(4, "\t<input semantic=\"TEXCOORD\" source=\"#mesh_%d_texcoords\" offset=\"0\" set=\"0\"/>", i);
 				}
+				if (mesh.flags & MESH_HAS_VERTEX_COLOURS) {
+					dest.writelf(4, "\t<input semantic=\"COLOR\" source=\"#mesh_%d_colours\" offset=\"0\" set=\"0\"/>", i);
+				}
 				dest.writesf(4, "\t<vcount>");
 				for(const Face& face : submesh.faces) {
 					if(face.v3 > -1) {

@@ -251,6 +251,7 @@ struct MobyBangle {
 // moby_mesh_importer.cpp
 std::vector<MobySubMesh> read_moby_submeshes(Buffer src, s64 table_ofs, s64 count, f32 scale, bool animated, MobyFormat format);
 std::vector<MobyMetalSubMesh> read_moby_metal_submeshes(Buffer src, s64 table_ofs, s64 count);
+s32 count_moby_mesh_texture_count(const std::vector<MobySubMesh>& submeshes, s32 o_class);
 Mesh recover_moby_mesh(const std::vector<MobySubMesh>& submeshes, const char* name, s32 o_class, s32 texture_count, s32 submesh_filter);
 void map_indices(MobySubMesh& submesh, const std::vector<size_t>& index_mapping);
 

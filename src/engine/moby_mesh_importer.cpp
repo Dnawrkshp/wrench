@@ -429,6 +429,37 @@ static std::vector<MobyVertex> read_vertices(Buffer src, const MobySubMeshEntry&
 
 #define VERIFY_SUBMESH(cond, message) verify(cond, "Moby class %d, submesh %d has bad " message ".", o_class, i);
 
+s32 count_moby_mesh_texture_count(const std::vector<MobySubMesh>& submeshes, s32 o_class) {
+	s32 texture_count = 0;
+	
+	for(s32 i = 0; i < submeshes.size(); i++) {
+		const MobySubMesh& src = submeshes[i];
+		
+		s32 texture_index = 0;
+		for(u8 index : src.indices) {
+			VERIFY_SUBMESH(index != 0x80, "index buffer");
+			if(index == 0) {
+				// There's an extra index stored in the index header, in
+				// addition to an index stored in some 0x10 byte texture unpack
+				// blocks. When a texture is applied, the next index from this
+				// list is used as the next vertex in the queue, but the
+				// triangle with it as its last index is not actually drawn.
+				u8 secret_index = src.secret_indices.at(texture_index);
+				if(secret_index == 0) {
+					break;
+				} else {
+					s32 texture = src.textures.at(texture_index).d3_tex0_1.data_lo;
+					if(texture >= texture_count)
+						texture_count = texture + 1;
+					texture_index++;
+				}
+			}
+		}
+	}
+
+	return texture_count;
+}
+
 Mesh recover_moby_mesh(const std::vector<MobySubMesh>& submeshes, const char* name, s32 o_class, s32 texture_count, s32 submesh_filter) {
 	Mesh mesh;
 	mesh.name = name;

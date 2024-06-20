@@ -154,9 +154,11 @@ static TiePacket read_tie_packet(Buffer src, const TiePacketHeader& header) {
 	while(next_strip < strips.size() || next_vertex < vertices.size()) {
 		// Data used to generate GIF tags for each of the strips.
 		if(next_strip < strips.size() && strips[next_strip].gif_tag_offset == next_offset) {
+
 			prim = &packet.primitives.emplace_back();
 			prim->material_index = material_index;
-			
+			prim->face = strips[next_strip].pad_3 != 0;
+
 			next_strip++;
 			next_offset += 1;
 			
@@ -228,7 +230,11 @@ ColladaScene recover_tie_class(const TieClass& tie) {
 				dest.tex_coord.t = vu_fixed12_to_float(src.t);
 				
 				if(i >= 2) {
-					submesh.faces.emplace_back(base_vertex + i - 2, base_vertex + i - 1, base_vertex + i);
+					if(i % 2 == primitive.face) {
+						submesh.faces.emplace_back(base_vertex + i - 2, base_vertex + i - 1, base_vertex + i);
+					} else {
+						submesh.faces.emplace_back(base_vertex + i - 0, base_vertex + i - 1, base_vertex + i - 2);
+					}
 				}
 			}
 		}

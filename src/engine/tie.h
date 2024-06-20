@@ -160,6 +160,7 @@ packed_struct(TieFatVertex,
 struct TiePrimitive {
 	s32 material_index;
 	std::vector<TieDinkyVertex> vertices;
+	s32 face;
 };
 
 struct TiePacket {
