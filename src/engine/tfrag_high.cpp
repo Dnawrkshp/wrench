@@ -83,6 +83,18 @@ ColladaScene recover_tfrags(const Tfrags& tfrags, TfragRecoveryFlags flags) {
 		
 		scene.texture_paths.emplace_back(stringf("%d.png", i));
 	}
+
+	for(const Tfrag& tfrag : tfrags.fragments) {
+		for(const TfragTexturePrimitive& primitive : tfrag.common_textures) {
+			s32 texture = primitive.d1_tex0_1.data_lo;
+			s32 clamp_s = primitive.d3_clamp_1.data_lo;
+			s32 clamp_t = primitive.d3_clamp_1.data_hi;
+
+			ColladaMaterial& material = scene.materials.at(texture);
+			material.clamp_s = clamp_s;
+			material.clamp_t = clamp_t;
+		}
+	}
 	
 	Mesh* mesh = nullptr;
 	
@@ -178,6 +190,7 @@ ColladaScene recover_tfrags(const Tfrags& tfrags, TfragRecoveryFlags flags) {
 				}
 			} else {
 				s32 face_mat_idx = tfrag.common_textures.at(face.ad_gif).d1_tex0_1.data_lo;
+				s32 face_clamp = tfrag.common_textures.at(face.ad_gif).d3_clamp_1.data_lo;
 				for (s32 j = 0; j < mesh->submeshes.size(); ++j) {
 					if (mesh->submeshes[j].material == face_mat_idx) {
 						submesh = &mesh->submeshes[j];

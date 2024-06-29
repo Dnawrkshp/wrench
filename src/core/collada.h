@@ -30,6 +30,8 @@ struct ColladaMaterial {
 	std::string name;
 	MaterialSurface surface;
 	s32 collision_id = -1; // Only used by the collision code.
+	bool clamp_s;
+	bool clamp_t;
 	ColladaMaterial() {}
 	ColladaMaterial(const Material& material)
 		: name(material.name)

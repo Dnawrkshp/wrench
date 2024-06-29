@@ -421,7 +421,7 @@ static void read_submeshes(Mesh& mesh, const XmlNode* instance, const XmlNode* g
 					tex_coord_offset = atoi(xml_attrib(input, "offset")->value());
 				}
 			}
-			s32 vertex_stride = std::max({position_offset, normal_offset, tex_coord_offset}) + 1;
+			s32 vertex_stride = std::max({position_offset, normal_offset, tex_coord_offset, colour_offset}) + 1;
 			verify(position_offset > -1 && vertex_stride < 10, "Invalid or missing <input> node.");
 			
 			if(normal_offset > -1) {
@@ -682,6 +682,8 @@ static void write_effects(OutBuffer dest, const std::vector<ColladaMaterial>& ma
 			dest.writelf(4, "\t\t<source>%s_surface</source>", material.name.c_str());
 			dest.writelf(4, "\t\t<minfilter>LINEAR_MIPMAP_LINEAR</minfilter>");
 			dest.writelf(4, "\t\t<magfilter>LINEAR</magfilter>");
+			dest.writelf(4, "\t\t<wrap_s>%s</wrap_s>", material.clamp_s ? "CLAMP" : "WRAP");
+			dest.writelf(4, "\t\t<wrap_t>%s</wrap_t>", material.clamp_t ? "CLAMP" : "WRAP");
 			dest.writelf(4, "\t</sampler2D>");
 			dest.writelf(4, "</newparam>");
 			dest.writelf(4, "<technique sid=\"common\">");

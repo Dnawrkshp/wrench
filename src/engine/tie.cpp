@@ -203,6 +203,8 @@ ColladaScene recover_tie_class(const TieClass& tie) {
 		ColladaMaterial& material = scene.materials.emplace_back();
 		material.name = stringf("%d", i);
 		material.surface = MaterialSurface(i);
+		material.clamp_s = tie.ad_gifs.at(i).d4_clamp_1.data_lo;
+		material.clamp_t = tie.ad_gifs.at(i).d4_clamp_1.data_hi;
 	}
 	
 	for(s32 i = 0; i < (s32) tie.ad_gifs.size(); i++) {
