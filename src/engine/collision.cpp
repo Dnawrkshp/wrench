@@ -255,19 +255,33 @@ static void write_collision_mesh(OutBuffer dest, CollisionSectors& sectors) {
 				
 				dest.pad(0x10);
 				s64 sector_ofs = dest.tell() - base_ofs;
-				
+
+				size_t sector_size = 4 + sector.vertices.size() * 4 + sector.faces.size() * 4 + quad_count;
+				if(sector_size % 0x10 != 0) {
+					sector_size += 0x10 - (sector_size % 0x10);
+				}
+
 				if(sector.vertices.size() >= 256) {
-					printf("warning: Collision sector %d %d %d dropped: Too many verticies.\n", sectors.coord + x, y_partitions.coord + y, x_partitions.coord + x);
+					printf("warning: Collision sector %d %d %d dropped: Too many verticies.\n", sectors.coord + z, y_partitions.coord + y, x_partitions.coord + x);
 					dest.write<u32>(x_partitions.temp_offset + x * 4, 0);
 					continue;
 				}
 				if(quad_count >= 256) {
-					printf("warning: Collision sector %d %d %d dropped: Too many quads.\n", sectors.coord + x, y_partitions.coord + y, x_partitions.coord + x);
+					printf("warning: Collision sector %d %d %d dropped: Too many quads.\n", sectors.coord + z, y_partitions.coord + y, x_partitions.coord + x);
 					dest.write<u32>(x_partitions.temp_offset + x * 4, 0);
 					continue;
 				}
-				
-				verify(sector.faces.size() < 65536, "Too many faces in sector.");
+				if (sector.faces.size() >= 256) {
+					printf("warning: Collision sector %d %d %d dropped: Too many faces.\n", sectors.coord + z, y_partitions.coord + y, x_partitions.coord + x);
+					dest.write<u32>(x_partitions.temp_offset + x * 4, 0);
+					continue;
+				}
+				if(sector_size >= 0x1000) {
+					printf("warning: Collision sector %d %d %d dropped: Sector size too large.\n", sectors.coord + z, y_partitions.coord + y, x_partitions.coord + x);
+					dest.write<u32>(x_partitions.temp_offset + x * 4, 0);
+					continue;
+				}
+
 				dest.write<u16>(sector.faces.size());
 				dest.write<u8>(sector.vertices.size());
 				dest.write<u8>(quad_count);
@@ -303,11 +317,6 @@ static void write_collision_mesh(OutBuffer dest, CollisionSectors& sectors) {
 					}
 				}
 				
-				size_t sector_size = 4 + sector.vertices.size() * 4 + sector.faces.size() * 4 + quad_count;
-				if(sector_size % 0x10 != 0) {
-					sector_size += 0x10 - (sector_size % 0x10);
-				}
-				verify(sector_size < 0x1000, "Sector too large.");
 				dest.write<u32>(x_partitions.temp_offset + x * 4, (sector_size / 0x10) | (sector_ofs << 8));
 			}
 		}
