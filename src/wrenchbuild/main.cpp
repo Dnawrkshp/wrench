@@ -115,7 +115,7 @@ static int wrenchbuild(int argc, char** argv) {
 		return 1;
 	}
 	
-	WadPaths wads = find_wads(argv[0]);
+	WadPaths wads; // find_wads(argv[0]);
 	
 	std::string mode = argv[1];
 	
