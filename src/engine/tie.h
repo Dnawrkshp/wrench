@@ -157,9 +157,23 @@ packed_struct(TieFatVertex,
 	/* 0x16 0x2c */ u16 gs_packet_write_ofs_2;
 )
 
+packed_struct(TieVertex,
+	/* PACK */
+	/* 0x00 */ s16 x;
+	/* 0x02 */ s16 y;
+	/* 0x04 */ s16 z;
+	/* 0x06 */ u16 gs_packet_write_ofs;
+	/* 0x08 */ u16 s;
+	/* 0x0a */ u16 t;
+	/* 0x0c */ u16 q;
+	/* 0x0e */ u16 gs_packet_write_ofs_2;
+	/* 0x10 */ s8 azimuth;
+	/* 0x11 */ s8 elevation;
+)
+
 struct TiePrimitive {
 	s32 material_index;
-	std::vector<TieDinkyVertex> vertices;
+	std::vector<TieVertex> vertices;
 	s32 face;
 };
 
@@ -181,10 +195,36 @@ packed_struct(TieAdGifs,
 	/* 0x40 */ GifAdData16 d5_miptbp2_1;
 )
 
+packed_struct(TieNormal,
+	/* 0x00 */ u32 unknown_0;
+	/* 0x04 */ s8 unknown_4;
+	/* 0x05 */ s8 intensity;
+	/* 0x06 */ s8 azimuth;
+	/* 0x07 */ s8 elevation;
+)
+
+packed_struct(TieRgbaRemapSegmentHeader,
+	/* 0x00 */ s16 remap_size[6];
+	/* 0x0c */ s16 unknown_c;
+	/* 0x0e */ s16 unknown_e;
+)
+
+packed_struct(TieRgbaRemap,
+	/* 0x00 */ u16 dest_ofs;
+	/* 0x02 */ u16 src_ofs;
+)
+
+packed_struct(TieFatRgbaRemap,
+	/* 0x00 */ u32 remap;
+)
+
 struct TieClass {
 	TieLod lods[3];
 	f32 scale;
 	std::vector<TieAdGifs> ad_gifs;
+	std::vector<TieNormal> normals;
+	std::vector<TieRgbaRemap> rgba_remap[3];
+	std::vector<TieFatRgbaRemap> fat_rgba_remap[3];
 };
 
 TieClass read_tie_class(Buffer src, Game game);
