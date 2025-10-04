@@ -23,23 +23,23 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - name: Install Ubuntu Dependencies
+    - name: Install Dependencies
       if: ${{ matrix.sys.os == 'ubuntu-latest' }}
       run: sudo apt update && sudo apt install extra-cmake-modules libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev zenity
 
-    - name: Install Mac OS Dependencies
+    - name: Install Dependencies
       if: ${{ matrix.sys.os == 'macos-latest' }}
       run: brew update && brew install cmake libpng zlib pkg-config
 
-    - name: Configure Ubuntu CMake
+    - name: Configure CMake
       if: ${{ matrix.sys.os == 'ubuntu-latest' }}
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DZIP_RELEASE=1
 
-    - name: Configure Windows CMake
+    - name: Configure CMake
       if: ${{ matrix.sys.os == 'windows-latest' }}
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DZIP_RELEASE=1
 
-    - name: Configure Mac OS CMake
+    - name: Configure CMake
       if: ${{ matrix.sys.os == 'macos-latest' }}
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DPNG_ARM_NEON=off -DZIP_RELEASE=1
 
