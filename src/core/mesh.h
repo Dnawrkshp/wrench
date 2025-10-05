@@ -22,7 +22,8 @@
 #include <glm/glm.hpp>
 #include <core/util.h>
 
-struct Face {
+struct Face
+{
 	s32 v0;
 	s32 v1;
 	s32 v2;
@@ -48,50 +49,27 @@ struct Face {
 	}
 };
 
-struct SkinAttributes {
-	u8 count = 1;
-	s8 joints[3] = {-1, 0, 0};
-	u8 weights[3] = {255, 0, 0};
-	bool operator==(const SkinAttributes& rhs) const {
-		return count == rhs.count
-			&& joints[0] == rhs.joints[0]
-			&& joints[1] == rhs.joints[1]
-			&& joints[2] == rhs.joints[2]
-			&& weights[0] == rhs.weights[0]
-			&& weights[1] == rhs.weights[1]
-			&& weights[2] == rhs.weights[2];
-	}
-	bool operator<(const SkinAttributes& rhs) const {
-		if(count != rhs.count) return count < rhs.count;
-		if(joints[0] != rhs.joints[0]) return joints[0] < rhs.joints[0];
-		if(joints[1] != rhs.joints[1]) return joints[1] < rhs.joints[1];
-		if(joints[2] != rhs.joints[2]) return joints[2] < rhs.joints[2];
-		if(weights[0] != rhs.weights[0]) return weights[0] < rhs.weights[0];
-		if(weights[1] != rhs.weights[1]) return weights[1] < rhs.weights[1];
-		return weights[2] < rhs.weights[2];
-	}
+struct SkinAttributes
+{
+	u8 count = 0;
+	s8 joints[3] = {0, 0, 0};
+	u8 weights[3] = {0, 0, 0};
+	
+	friend auto operator<=>(const SkinAttributes&, const SkinAttributes&) = default;
 };
 
-struct ColourAttribute {
+struct ColourAttribute
+{
 	u8 r = 0;
 	u8 g = 0;
 	u8 b = 0;
 	u8 a = 0;
-	bool operator==(const ColourAttribute& rhs) const {
-		return r == rhs.r
-			&& g == rhs.g
-			&& b == rhs.b
-			&& a == rhs.a;
-	}
-	bool operator<(const ColourAttribute& rhs) const {
-		if(a != rhs.a) return a < rhs.a;
-		if(b != rhs.b) return b < rhs.b;
-		if(g != rhs.g) return g < rhs.g;
-		return r < rhs.r;
-	}
+	
+	friend auto operator<=>(const ColourAttribute&, const ColourAttribute&) = default;
 };
 
-struct Vertex {
+struct Vertex
+{
 	glm::vec3 pos;
 	glm::vec3 normal = {0, 0, 0};
 	SkinAttributes skin;
@@ -126,19 +104,22 @@ struct Vertex {
 	}
 };
 
-enum MeshFlags {
+enum MeshFlags
+{
 	MESH_HAS_QUADS = 1 << 0,
 	MESH_HAS_NORMALS = 1 << 1,
 	MESH_HAS_VERTEX_COLOURS = 1 << 2,
 	MESH_HAS_TEX_COORDS = 1 << 3
 };
 
-struct SubMesh {
+struct SubMesh
+{
 	s32 material = -1;
 	std::vector<Face> faces;
 };
 
-struct Mesh {
+struct Mesh
+{
 	std::string name;
 	u32 flags = 0;
 	std::vector<Vertex> vertices;
@@ -157,7 +138,8 @@ bool vec3_equal_eps(const glm::vec3& lhs, const glm::vec3& rhs, f32 eps = 0.0000
 
 Mesh merge_meshes(const std::vector<Mesh>& meshes, std::string name, u32 flags);
 
-struct BSphereVertexList {
+struct BSphereVertexList
+{
 	const Vertex* vertices;
 	size_t vertex_count;
 };

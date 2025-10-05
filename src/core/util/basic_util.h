@@ -1,6 +1,6 @@
 /*
 	wrench - A set of modding tools for the Ratchet & Clank PS2 games.
-	Copyright (C) 2019-2022 chaoticgd
+	Copyright (C) 2019-2025 chaoticgd
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -61,37 +61,12 @@ u32 byte_swap_32(u32 val);
 
 std::size_t parse_number(std::string x);
 
-// Kludge since C++ still doesn't have proper reflection.
-#define DEF_FIELD(member) \
-	{ \
-		auto temp = std::move(member); \
-		t.field(#member, temp); \
-		member = std::move(temp); \
-	}
-#define DEF_PACKED_FIELD(member) \
-	{ \
-		auto temp = member; \
-		t.field(#member, temp); \
-		member = temp; \
-	}
-#define DEF_HEXDUMP(member) \
-	{ \
-		auto temp = std::move(member); \
-		t.hexdump(#member, temp); \
-		member = std::move(temp); \
-	}
-
-template <typename> struct MemberTraits;
-template <typename Return, typename Object>
-struct MemberTraits<Return (Object::*)> {
-	typedef Object instance_type;
-};
-
 template <typename T>
 using Opt = std::optional<T>;
 
 template <typename T>
-const T& opt_iterator(const Opt<T>& opt) {
+const T& opt_iterator(const Opt<T>& opt)
+{
 	if(opt.has_value()) {
 		return *opt;
 	} else {
@@ -101,7 +76,8 @@ const T& opt_iterator(const Opt<T>& opt) {
 }
 
 template <typename T>
-const size_t opt_size(const Opt<std::vector<T>>& opt_vec) {
+const size_t opt_size(const Opt<std::vector<T>>& opt_vec)
+{
 	if(opt_vec.has_value()) {
 		return opt_vec->size();
 	} else {
@@ -110,7 +86,8 @@ const size_t opt_size(const Opt<std::vector<T>>& opt_vec) {
 }
 
 template <typename T>
-T& opt_iterator(Opt<T>& opt) {
+T& opt_iterator(Opt<T>& opt)
+{
 	if(opt.has_value()) {
 		return *opt;
 	} else {
@@ -120,7 +97,8 @@ T& opt_iterator(Opt<T>& opt) {
 }
 
 template <typename T>
-T opt_or_zero(Opt<T>& opt) {
+T opt_or_zero(Opt<T>& opt)
+{
 	if(opt.has_value()) {
 		return *opt;
 	} else {
@@ -136,7 +114,8 @@ struct IsVector<std::vector<Element>> : std::true_type {};
 // Implements a way to delay the execution of a block of code until the
 // enclosing scope ends. This lets us write statements in a more logical order.
 template <typename F>
-struct _deferer {
+struct _deferer
+{
 	F callback;
 	_deferer(F cb) : callback(cb) {}
 	~_deferer() { callback(); }
@@ -159,11 +138,14 @@ s32 bit_range(u64 val, s32 lo, s32 hi);
 
 std::string to_snake_case(const char* src);
 
+#define ALIGN(value, alignment) ((value) + (-(value) & ((alignment) - 1)))
+
 s32 align32(s32 value, s32 alignment);
 s64 align64(s64 value, s64 alignment);
 
 template <typename T>
-bool contains(const T& container, const typename T::value_type& value) {
+bool contains(const T& container, const typename T::value_type& value)
+{
 	for(const auto& element : container) {
 		if(element == value) {
 			return true;

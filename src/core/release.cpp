@@ -19,20 +19,20 @@
 #include "release.h"
 
 static const Release RELEASES[] = {
-	{"pbpx_955.16", Game::RAC, Region::JAPAN, "Ratchet & Clank"}, // japan original
+	{"scps_150.37", Game::RAC, Region::JAPAN, "Ratchet & Clank"}, // japan original
 	{"sced_510.75", Game::RAC, Region::EU, "Ratchet & Clank"}, // eu demo
 	{"sces_509.16", Game::RAC, Region::EU, "Ratchet & Clank"}, // eu black label/plantinum
 	{"scus_971.99", Game::RAC, Region::US, "Ratchet & Clank"}, // us original/greatest hits
 	{"scus_972.09", Game::RAC, Region::US, "Ratchet & Clank"}, // us demo 1
 	{"scus_972.40", Game::RAC, Region::US, "Ratchet & Clank"}, // us demo 2
-	{"scaj_200.52", Game::GC, Region::JAPAN, "Ratchet & Clank: Going Commando"}, // japan original
+	{"scps_150.56", Game::GC, Region::JAPAN, "Ratchet & Clank: Going Commando"}, // japan original
 	{"sces_516.07", Game::GC, Region::EU, "Ratchet & Clank 2"}, // eu original/platinum
 	{"scus_972.68", Game::GC, Region::US, "Ratchet & Clank: Going Commando"}, // us greatest hits
 	{"scus_972.68", Game::GC, Region::US, "Ratchet & Clank: Going Commando"}, // us original
 	{"scus_973.22", Game::GC, Region::US, "Ratchet & Clank: Going Commando"}, // us demo
 	{"scus_973.23", Game::GC, Region::US, "Ratchet & Clank: Going Commando"}, // us retail employees demo
 	{"scus_973.74", Game::GC, Region::US, "Ratchet & Clank: Going Commando"}, // us rac2 + jak demo
-	{"pcpx_966.53", Game::UYA, Region::JAPAN, "Ratchet & Clank: Up Your Arsenal"}, // japan promotional
+	{"papx_905.20", Game::UYA, Region::JAPAN, "Ratchet & Clank: Up Your Arsenal"}, // japan promotional
 	{"sced_528.47", Game::UYA, Region::EU, "Ratchet & Clank 3"}, // eu demo
 	{"sced_528.48", Game::UYA, Region::EU, "Ratchet & Clank 3"}, // r&c3 + sly 2 demo
 	{"sces_524.56", Game::UYA, Region::EU, "Ratchet & Clank 3"}, // eu original/plantinum
@@ -45,58 +45,46 @@ static const Release RELEASES[] = {
 	{"sced_536.60", Game::DL, Region::EU, "Ratchet: Gladiator"}, // jak x glaiator demo
 	{"sces_532.85", Game::DL, Region::EU, "Ratchet: Gladiator"}, // eu original/platinum
 	{"scps_150.99", Game::DL, Region::JAPAN, "Ratchet & Clank 4"}, // japan special gift package
-	{"scps_193.28", Game::DL, Region::JAPAN, "Ratchet & Clank 4"}, // japan reprint
+	{"scps_151.00", Game::DL, Region::JAPAN, "Ratchet & Clank 4"}, // japan reprint
 	{"scus_974.65", Game::DL, Region::US, "Ratchet: Deadlocked"}, // us original
 	{"scus_974.85", Game::DL, Region::US, "Ratchet: Deadlocked"}, // us demo
 	{"scus_974.87", Game::DL, Region::US, "Ratchet: Deadlocked"} // us public beta
 };
 
-static std::pair<Game, const char*> GAME_SEARCH_PATTERNS[] = {
-	{Game::DL, "Deadlocked"},
-	{Game::UYA, "Up Your Arsenal"},
-	{Game::GC, "Going Commando"},
-	{Game::RAC, "Ratchet & Clank"}
-};
-
-Release identify_release(const IsoDirectory& root, InputStream& iso) {
+Release identify_release(const std::string& elf_name)
+{
 	Release result;
-	// First check all of the known releases.
-	for(const IsoFileRecord& file : root.files) {
-		for(const Release& release : RELEASES) {
-			if(release.elf_name == file.name) {
-				result = release;
-				break;
-			}
+	for (const Release& release : RELEASES) {
+		if (release.elf_name == elf_name) {
+			result = release;
+			break;
 		}
 	}
-	if(result.game == Game::UNKNOWN) {
-		// Unknown build, try to identify it in a dirtier slower way.
-		for(const IsoFileRecord& record : root.files) {
-			if(record.size > 4) {
-				// Look for the boot ELF.
-				u8 magic[4] = {};
-				iso.seek(record.lba.bytes());
-				iso.read_n(magic, 4);
-				if(memcmp(magic, "\x7f\x45\x4c\x46", 4) == 0) {
-					iso.seek(record.lba.bytes());
-					std::vector<u8> elf = iso.read_multiple<u8>(record.size);
-					// Look for the names of the respective games in the boot ELF.
-					for(auto [game, pattern] : GAME_SEARCH_PATTERNS) {
-						for(s32 i = 0; i < (s32) elf.size() - strlen(pattern); i++) {
-							if(memcmp(&elf[i], pattern, strlen(pattern)) == 0) {
-								printf("Unknown build identified as %s.\n", game_to_string(game).c_str());
-								result.elf_name = record.name;
-								result.game = game;
-								result.name = "unknown";
-								break;
-							}
-						}
-						if(result.game != Game::UNKNOWN) {
-							break;
-						}
-					}
-				}
-			}
+	return result;
+}
+
+static std::string normalise_game_id(const std::string& game_id)
+{
+	std::string result;
+	for (char c : game_id) {
+		if (c >= 'A' && c <= 'Z') {
+			result.push_back(c + ('a' - 'A'));
+		} else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+			result.push_back(c);
+		}
+	}
+	return result;
+}
+
+Release identify_release_fuzzy(const std::string& game_id)
+{
+	std::string normal_game_id = normalise_game_id(game_id);
+	
+	Release result;
+	for (const Release& release : RELEASES) {
+		if (normalise_game_id(release.elf_name) == normal_game_id) {
+			result = release;
+			break;
 		}
 	}
 	return result;

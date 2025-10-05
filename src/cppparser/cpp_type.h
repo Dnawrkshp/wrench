@@ -25,8 +25,10 @@
 #include <core/buffer.h>
 #include <cppparser/cpp_lexer.h>
 
-enum CppTypeDescriptor {
+enum CppTypeDescriptor
+{
 	CPP_ARRAY,
+	CPP_BITFIELD,
 	CPP_BUILT_IN,
 	CPP_ENUM,
 	CPP_STRUCT_OR_UNION,
@@ -36,12 +38,46 @@ enum CppTypeDescriptor {
 
 struct CppType;
 
-struct CppArray {
+struct CppArray
+{
 	s32 element_count = 0;
 	std::unique_ptr<CppType> element_type;
 };
 
-enum CppBuiltIn {
+struct CppBitField
+{
+	s32 bit_offset = 0;
+	s32 bit_size = 0;
+	std::unique_ptr<CppType> storage_unit_type;
+};
+
+inline u64 cpp_unpack_unsigned_bitfield(u64 storage_unit, s32 bit_offset, s32 bit_size)
+{
+	return (storage_unit >> bit_offset) & ((static_cast<u64>(1) << bit_size) - 1);
+}
+
+inline s64 cpp_unpack_signed_bitfield(u64 storage_unit, s32 bit_offset, s32 bit_size)
+{
+	return static_cast<s64>(storage_unit << (64 - (bit_offset + bit_size))) >> (64 - bit_size);
+}
+
+inline u64 cpp_pack_unsigned_bitfield(u64 bitfield, s32 bit_offset, s32 bit_size)
+{
+	return (bitfield & ((static_cast<u64>(1) << bit_size) - 1)) << bit_offset;
+}
+
+inline u64 cpp_pack_signed_bitfield(s64 bitfield, s32 bit_offset, s32 bit_size)
+{
+	return static_cast<u64>((bitfield & ((static_cast<u64>(1) << bit_size) - 1)) << (64 - bit_size)) >> (64 - bit_offset - bit_size);
+}
+
+inline u64 cpp_zero_bitfield(u64 storage_unit, s32 bit_offset, s32 bit_size)
+{
+	return storage_unit & ~(((static_cast<u64>(1) << bit_size) - 1) << bit_offset);
+}
+
+enum CppBuiltIn
+{
 	CPP_VOID,
 	CPP_CHAR, CPP_UCHAR, CPP_SCHAR,
 	CPP_SHORT, CPP_USHORT,
@@ -57,17 +93,20 @@ enum CppBuiltIn {
 	CPP_BUILT_IN_COUNT
 };
 
-inline bool cpp_is_built_in_integer(CppBuiltIn x) {
+inline bool cpp_is_built_in_integer(CppBuiltIn x)
+{
 	return x >= CPP_CHAR
 		&& x <= CPP_U128;
 }
 
-inline bool cpp_is_built_in_float(CppBuiltIn x) {
+inline bool cpp_is_built_in_float(CppBuiltIn x)
+{
 	return x == CPP_FLOAT
 		|| x == CPP_DOUBLE;
 }
 
-inline bool cpp_is_built_in_signed(CppBuiltIn x) {
+inline bool cpp_is_built_in_signed(CppBuiltIn x)
+{
 	return x == CPP_CHAR
 		|| x == CPP_SCHAR
 		|| x == CPP_SHORT
@@ -81,37 +120,61 @@ inline bool cpp_is_built_in_signed(CppBuiltIn x) {
 		|| x == CPP_S128;
 	}
 
-struct CppEnum {
+struct CppEnum
+{
 	std::vector<std::pair<s32, std::string>> constants;
 };
 
-struct CppStructOrUnion {
+struct CppStructOrUnion
+{
 	bool is_union = false;
 	std::vector<CppType> fields;
 };
 
-struct CppUnion {
+struct CppUnion
+{
 	std::vector<CppType> fields;
 };
 
-struct CppTypeName {
+struct CppTypeName
+{
 	std::string string;
 };
 
-struct CppPointerOrReference {
+struct CppPointerOrReference
+{
 	bool is_reference = false;
 	std::unique_ptr<CppType> value_type;
 };
 
-struct CppType {
+enum CppPreprocessorDirectiveType
+{
+	CPP_DIRECTIVE_BCD,
+	CPP_DIRECTIVE_BITFLAGS,
+	CPP_DIRECTIVE_ELEMENTNAMES,
+	CPP_DIRECTIVE_ENUM
+};
+
+struct CppPreprocessorDirective
+{
+	CppPreprocessorDirectiveType type;
+	std::string string;
+	
+	bool operator==(const CppPreprocessorDirective& rhs) const { return type == rhs.type && string == rhs.string; }
+};
+
+struct CppType
+{
 	std::string name;
 	s32 offset = -1;
 	s32 size = -1;
 	s32 alignment = -1;
 	s32 precedence = -1; // Used decide if a type should be overwritten by a new type.
+	std::vector<CppPreprocessorDirective> preprocessor_directives;
 	CppTypeDescriptor descriptor;
 	union {
 		CppArray array;
+		CppBitField bitfield;
 		CppBuiltIn built_in;
 		CppEnum enumeration;
 		CppStructOrUnion struct_or_union;
@@ -127,7 +190,8 @@ struct CppType {
 	CppType& operator=(CppType&& rhs);
 };
 
-struct CppABI {
+struct CppABI
+{
 	s32 built_in_sizes[CPP_BUILT_IN_COUNT];
 	s32 built_in_alignments[CPP_BUILT_IN_COUNT];
 	s32 enum_size;
@@ -140,6 +204,7 @@ void layout_cpp_type(CppType& type, std::map<std::string, CppType>& types, const
 void dump_cpp_type(OutBuffer& dest, const CppType& type);
 void destructively_merge_cpp_structs(CppType& dest, CppType& src);
 const char* cpp_built_in(CppBuiltIn built_in);
+const CppPreprocessorDirective* cpp_directive(const CppType& type, CppPreprocessorDirectiveType directive_type);
 
 extern CppABI NATIVE_ABI;
 extern CppABI CPP_PS2_ABI;

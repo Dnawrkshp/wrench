@@ -29,67 +29,73 @@
 // respective costs and these results will be summed. If the sum is greater than
 // the max cost, the packet is too big so this can be used to reject changes to
 // a packet e.g. by limiting the length of a strip.
-struct TriStripConstraints {
-	u8 num_constraints = 0;
-	s32 constant_cost[4];
-	s32 strip_cost[4];
-	s32 vertex_cost[4];
-	s32 index_cost[4];
-	s32 material_cost[4];
-	s32 max_cost[4];
+struct TriStripConstraint
+{
+	s32 constant_cost = 0;
+	s32 strip_cost = 0;
+	s32 vertex_cost = 0;
+	s32 index_cost = 0;
+	s32 material_cost = 0;
+	s32 max_cost = 0;
+	s32 round_index_cost_up_to_multiple_of = 1;
 };
 
-struct TriStripConfig {
-	TriStripConstraints constraints;
-	bool support_instancing;
+struct TriStripConfig
+{
+	std::vector<TriStripConstraint> constraints;
+	bool support_index_buffer = false;
+	bool support_instancing = false;
 };
 
-struct TriStripRunningTotals {
+struct TriStripRunningTotals
+{
 	s32 strip_count = 0;
 	s32 vertex_count = 0;
 	s32 index_count = 0;
 	s32 material_count = 0;
 };
 
-struct GeometryPacket {
+struct GeometryPacket
+{
 	s32 primitive_begin = 0;
 	s32 primitive_count = 0;
 };
 
-struct GeometryPackets {
+struct GeometryPackets
+{
 	std::vector<GeometryPacket> packets;
 	std::vector<GeometryPrimitive> primitives;
 	std::vector<s32> indices;
 };
 
-GeometryPackets generate_tristrip_packets(const GeometryPrimitives& input, const std::vector<Material>& materials, const std::vector<EffectiveMaterial>& effectives, const TriStripConfig& config);
+GeometryPackets generate_tristrip_packets(const GeometryPrimitives& input, const TriStripConfig& config);
 
 // Gets fed tristrips (as well as triangle lists) and incrementally splits them
 // up into packets based on the constraints passed to it at construction time.
-class TriStripPacketGenerator {
-	const std::vector<Material>& _materials;
-	const std::vector<EffectiveMaterial>& _effectives;
-	const TriStripConstraints& _constraints;
-	bool _support_instancing;
-	
-	TriStripRunningTotals _totals;
-	GeometryPacket* _packet = nullptr;
-	s32 _current_effective_material = -1;
-	
-	GeometryPackets _output;
-	
+class TriStripPacketGenerator
+{
 public:
-	TriStripPacketGenerator(const std::vector<Material>& materials, const std::vector<EffectiveMaterial>& effectives, const TriStripConstraints& constraints, bool support_instancing);
-	void add_list(const s32* indices, s32 index_count, s32 effective_material);
-	void add_strip(const s32* indices, s32 index_count, s32 effective_material);
+	TriStripPacketGenerator(const TriStripConfig& config);
+	void add_primitive(const s32* indices, s32 index_count, GeometryType type, s32 effective_material);
 	GeometryPackets get_output();
 	
 private:
 	void new_packet();
 	bool try_add_strip();
+	bool try_add_vertex(s32 index);
 	bool try_add_unique_vertex();
-	bool try_add_duplicate_vertex();
+	bool try_add_repeated_vertex();
 	bool try_add_material();
+	
+	const TriStripConfig& m_config;
+	
+	TriStripRunningTotals m_totals;
+	GeometryPacket* m_packet = nullptr;
+	s32 m_current_effective_material = -1;
+	s32 m_current_packet = -1;
+	std::vector<s32> m_last_packet_with_vertex;
+	
+	GeometryPackets m_output;
 };
 
 #endif

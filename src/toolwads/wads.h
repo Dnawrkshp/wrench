@@ -21,7 +21,8 @@
 
 #include <core/util.h>
 
-enum License {
+enum License
+{
 	LICENSE_WRENCH = 0,
 	LICENSE_BARLOW = 1,
 	LICENSE_CATCH2 = 2,
@@ -36,7 +37,9 @@ enum License {
 	LICENSE_IMGUIZMO = 11,
 	LICENSE_ZLIB = 12,
 	LICENSE_LIBZIP = 13,
-	MAX_LICENSE = 14
+	LICENSE_IMGUI_CLUB = 14,
+	LICENSE_PINE = 15,
+	MAX_LICENSE = 16
 };
 
 packed_struct(BuildWadHeader,
@@ -73,11 +76,25 @@ packed_struct(EditorWadHeader,
 	/* 0x108 */ SectorRange instance_3d_view_icons[32];
 )
 
+packed_struct(MemcardWadHeader,
+	/* 0x0 */ s32 header_size;
+	/* 0x4 */ Sector32 sector;
+	/* 0x8 */ SectorRange savegame;
+	/* 0xc */ SectorRange types[4];
+)
+
+packed_struct(TrainerWadHeader,
+	/* 0x0 */ s32 header_size;
+	/* 0x4 */ Sector32 sector;
+	/* 0x8 */ SectorRange types[4];
+)
+
 packed_struct(ToolWadInfo,
 	BuildWadHeader build;
 	GuiWadHeader gui;
 	LauncherWadHeader launcher;
 	EditorWadHeader editor;
+	MemcardWadHeader memcard;
 )
 
 packed_struct(OobeWadHeader,
@@ -88,12 +105,15 @@ extern "C" {
 	extern ToolWadInfo wadinfo;
 }
 
-struct WadPaths {
+struct WadPaths
+{
 	std::string gui;
 	std::string launcher;
 	std::string editor;
 	std::string underlay;
 	std::string overlay;
+	std::string memcard;
+	std::string trainer;
 };
 
 WadPaths find_wads(const char* bin_path);
